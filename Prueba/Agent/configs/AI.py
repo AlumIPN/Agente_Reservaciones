@@ -1,0 +1,2 @@
+import os
+os.environ["OPENAI_API_KEY"] = "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"
