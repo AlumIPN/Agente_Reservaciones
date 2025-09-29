@@ -9,3 +9,5 @@ Estas son las ciudades disponibles para revisar hoteles, restaurantes, atraccion
   (8, 'Santa María del Tule', 'Oaxaca'),
   (9, 'Juchitán de Zaragoza', 'Oaxaca'),
   (10, 'Huajuapan de León', 'Oaxaca')
+
+Archivo con el cual interactuar para probar el prototipo Main.ipynb o Main.py
