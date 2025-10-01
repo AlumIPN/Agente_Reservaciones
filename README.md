@@ -1,3 +1,5 @@
+Para que el proyecto funcione adecuadamente leer el archivo Dependencias.txt
+
 Estas son las ciudades disponibles para revisar hoteles, restaurantes, atracciones, renta de autos y transportes:
   (1,'Oaxaca de Juárez', 'Oaxaca'),
   (2, 'Mazunte', 'Oaxaca'),
