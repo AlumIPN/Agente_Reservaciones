@@ -1,0 +1,3 @@
+Para que el proyecto funcione adecuadamente deberán correr el siguiente comando en bash:
+
+pip install -r requirements.txt
