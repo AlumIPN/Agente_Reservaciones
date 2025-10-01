@@ -1,0 +1,23 @@
+
+
+altgraph==0.17.2
+boto3==1.21.3
+botocore==1.24.3
+colorama==0.4.4
+future==0.18.2
+jmespath==0.10.0
+mysql-connector-python==8.0.29
+numpy==1.22.3
+opencv-python==4.5.5.64
+pefile==2021.9.3
+Pillow==9.1.0
+protobuf==3.20.1
+pyinstaller==5.0.1
+pyinstaller-hooks-contrib==2022.4
+python-dateutil==2.8.2
+pywin32-ctypes==0.2.0
+qrcode==7.3.1
+s3transfer==0.5.1
+six==1.16.0
+swarm @ git+https://github.com/openai/swarm.git@0c82d7d868bb8e2d380dfd2a319b5c3a1f4c0cb9
+urllib3==1.26.8
