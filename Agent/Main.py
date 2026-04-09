@@ -1,31 +1,31 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-# In[2]:
+# In[6]:
 
 
-from Agent.configs.AI import *
+from configs.AI import *
 
 
-# In[3]:
+# In[7]:
 
 
-from Agent.configs.Agents.TypesAg import *
+from configs.Agents.TypesAg import *
 
 
-# In[4]:
+# In[8]:
 
 
 from swarm.repl import run_demo_loop
 
 
-# In[5]:
+# In[9]:
 
 
 from datetime import datetime
 
 
-# In[6]:
+# In[10]:
 
 
 if __name__ == "__main__":
