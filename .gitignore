@@ -1,0 +1,32 @@
+# Ignorar todos los notebooks
+*.ipynb
+
+# Excepto el principal
+!Main.ipynb
+
+# Ignorar checkpoints de Jupyter
+.ipynb_checkpoints/
+
+# Ignorar entornos conda y virtuales
+env/
+venv/
+*.conda
+*.yaml
+
+# Ignorar archivos de sistema
+.DS_Store
+Thumbs.db
+
+# Ignorar cachés de Python
+__pycache__/
+*.pyc
+
+# Ignorar archivos específicos
+Loggin
+BDAg_R
+BDAg2
+BD1
+Main.py
+
+Agente_Reservaciones.egg-info/
+
