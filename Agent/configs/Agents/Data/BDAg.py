@@ -19,15 +19,15 @@ import datetime
 from configs.Agents.Data.context_variables import context_variables
 
 
-# In[4]:
+# In[3]:
 
 
 from dotenv import load_dotenv
 
 
-# In[5]:
+# In[4]:
 
-
+import json
 import os
 
 load_dotenv()
@@ -38,7 +38,7 @@ Host = os.getenv("host")
 
 
 
-# In[6]:
+# In[5]:
 
 
 def conectar_mysql():
@@ -47,6 +47,22 @@ def conectar_mysql():
         user=User,
         password=Pass,
         database="Turismo_Agente"
+    )
+
+def conectar_mysql2():
+    return mysql.connector.connect(
+        host=Host,
+        user=User,
+        password=Pass,
+        database="Autobus"
+    )
+
+def conectar_mysql3():
+    return mysql.connector.connect(
+        host=Host,
+        user=User,
+        password=Pass,
+        database="TArero"
     )
 
 
@@ -78,107 +94,8 @@ def cargar_contexto(usuario_id):
     conn.close()
     return context_variables
 
+cargar_contexto(1)  # usuario con id=1
 
-cargar_contexto(1)
-
-# In[22]:
-
-
-def consultar_hoteles(ciudad):
-    conn = conectar_mysql()
-    cursor = conn.cursor()
-    query = """
-        SELECT h.nombre, h.direccion, h.estrellas, h.servicios
-        FROM hoteles h
-        JOIN ciudades c ON h.ciudad_id = c.id
-        WHERE c.nombre LIKE %s
-    """
-    patron = f"%{ciudad}%" 
-    cursor.execute(query, (patron,))
-    resultados = cursor.fetchall()
-    cursor.close()
-    conn.close()
-    return resultados
-
-
-# In[27]:
-
-
-def consultar_restaurantes(ciudad):
-    conn = conectar_mysql()
-    cursor = conn.cursor()
-    query = """
-        SELECT r.nombre, r.direccion, r.tipo_comida, r.descripcion
-        FROM restaurantes r
-        JOIN ciudades c ON r.ciudad_id = c.id
-        WHERE c.nombre LIKE %s
-    """
-    patron = f"%{ciudad}%" 
-    cursor.execute(query, (patron,))
-    resultados = cursor.fetchall()
-    cursor.close()
-    conn.close()
-    return resultados
-
-
-# In[31]:
-
-
-def consultar_atracciones(ciudad):
-    conn = conectar_mysql()
-    cursor = conn.cursor()
-    query = """
-        SELECT a.nombre, a.descripcion, a.tipo
-        FROM atracciones a
-        JOIN ciudades c ON a.ciudad_id = c.id
-        WHERE c.nombre LIKE %s
-    """
-    patron = f"%{ciudad}%" 
-    cursor.execute(query, (patron,))
-    resultados = cursor.fetchall()
-    cursor.close()
-    conn.close()
-    return resultados
-
-
-# In[33]:
-
-
-def consultar_transportes(ciudad):
-    conn = conectar_mysql()
-    cursor = conn.cursor()
-    query = """
-        SELECT t.empresa, t.tipo, t.contacto
-        FROM transportes t
-        JOIN ciudades c ON t.ciudad_id = c.id
-        WHERE c.nombre LIKE %s
-    """
-    patron = f"%{ciudad}%" 
-    cursor.execute(query, (patron,))
-    resultados = cursor.fetchall()
-    cursor.close()
-    conn.close()
-    return resultados
-
-
-# In[36]:
-
-
-def consultar_autos(ciudad):
-    conn = conectar_mysql()
-    cursor = conn.cursor()
-    query = """
-        SELECT v.nombre, v.direccion, v.telefono
-        FROM agencias_autos v
-        JOIN ciudades c ON v.ciudad_id = c.id
-        WHERE c.nombre LIKE %s
-    """
-    patron = f"%{ciudad}%" 
-    cursor.execute(query, (patron,))
-    resultados = cursor.fetchall()
-    cursor.close()
-    conn.close()
-    return resultados
 
 
 # In[2]:
@@ -254,7 +171,7 @@ def itinerario(folio, tipo, nombre, ciudad, fecha, detalles=None):
     
     cursor.close()
     conn.close()
-    print(query)
+
     return f"Itinerario agregado para folio {folio}."
 
 
@@ -262,40 +179,124 @@ def itinerario(folio, tipo, nombre, ciudad, fecha, detalles=None):
 
 
 def actualizar(folio, cambios):
-    """
-    Actualiza registros en las tablas reservas e itinerario según los campos enviados.
-    
-    Parámetros:
-        folio   : folio de la reserva/itinerario a actualizar
-        cambios : diccionario con los campos a actualizar y sus nuevos valores
-                  Ejemplo: {"num_viajeros": 4, "fecha_fin": "2026-04-10", "nombre": "Hotel Quinta Real"}
-    """
+
     conn = conectar_mysql()
     cursor = conn.cursor()
+    
+    if isinstance(cambios, str):
+        cambios = json.loads(cambios)
 
-    # Definir qué campos pertenecen a cada tabla
+    cursor.execute("""
+        SELECT fecha_inicio, fecha_fin 
+        FROM reservas 
+        WHERE folio = %s
+    """, (folio,))
+    
+    result = cursor.fetchone()
+    fecha_inicio_actual, fecha_fin_actual = result if result else (None, None)
+
+    nueva_fecha_inicio = fecha_inicio_actual
+    nueva_fecha_fin = fecha_fin_actual
+
+
+    # 1. Detectar cambios desde itinerario
+    
+    if "itinerario" in cambios:
+        for item in cambios["itinerario"]:
+            fecha_original = item.get("fecha_original")
+            fecha_nueva = item.get("fecha_nueva")
+
+            if not fecha_original or not fecha_nueva:
+                continue
+
+            # Si coincide con inicio
+            if fecha_original == str(fecha_inicio_actual):
+                nueva_fecha_inicio = fecha_nueva
+
+            # Si coincide con fin
+            if fecha_original == str(fecha_fin_actual):
+                nueva_fecha_fin = fecha_nueva
+
+    # 2. Actualizar reservas
+
     campos_reservas = {"num_viajeros", "fecha_inicio", "fecha_fin"}
-    campos_itinerario = {"nombre", "ciudad", "fecha", "detalles"}
-
-    # Actualizar tabla reservas si hay cambios
     set_reservas = []
     valores_reservas = []
-    for campo in campos_reservas & cambios.keys():
+
+    # Campos directos
+    for campo in {"num_viajeros"} & cambios.keys():
         set_reservas.append(f"{campo} = %s")
         valores_reservas.append(cambios[campo])
+
+    # Fechas detectadas dinámicamente
+    if nueva_fecha_inicio != fecha_inicio_actual:
+        set_reservas.append("fecha_inicio = %s")
+        valores_reservas.append(nueva_fecha_inicio)
+
+    if nueva_fecha_fin != fecha_fin_actual:
+        set_reservas.append("fecha_fin = %s")
+        valores_reservas.append(nueva_fecha_fin)
+
     if set_reservas:
-        sql_reservas = f"UPDATE reservas SET {', '.join(set_reservas)} WHERE folio = %s"
+        sql_reservas = f"""
+            UPDATE reservas 
+            SET {', '.join(set_reservas)} 
+            WHERE folio = %s
+        """
         cursor.execute(sql_reservas, valores_reservas + [folio])
 
-    # Actualizar tabla itinerario si hay cambios
-    set_itinerario = []
-    valores_itinerario = []
-    for campo in campos_itinerario & cambios.keys():
-        set_itinerario.append(f"{campo} = %s")
-        valores_itinerario.append(cambios[campo])
-    if set_itinerario:
-        sql_itinerario = f"UPDATE itinerario SET {', '.join(set_itinerario)} WHERE folio = %s"
-        cursor.execute(sql_itinerario, valores_itinerario + [folio])
+    # 3. Actualizar itinerario
+
+    if "itinerario" in cambios:
+        for item in cambios["itinerario"]:
+            tipo = item.get("tipo")
+            fecha_original = item.get("fecha_original")
+
+            nombre = item.get("nombre")
+            fecha_nueva = item.get("fecha_nueva")
+            detalles = item.get("detalles")
+
+            if not tipo or not fecha_original:
+                continue
+
+            set_clauses = []
+            valores = []
+
+            if nombre is not None:
+                set_clauses.append("nombre = %s")
+                valores.append(nombre)
+
+            if fecha_nueva is not None:
+                set_clauses.append("fecha = %s")
+                valores.append(fecha_nueva)
+
+            if detalles is not None:
+                set_clauses.append("detalles = %s")
+                valores.append(detalles)
+
+            if not set_clauses:
+                continue
+
+            query = f"""
+                UPDATE itinerario
+                SET {', '.join(set_clauses)}
+                WHERE folio = %s AND tipo = %s AND fecha = %s
+            """
+
+            valores_main = valores + [folio, tipo, fecha_original]
+            cursor.execute(query, valores_main)
+
+            # Fallback
+            if cursor.rowcount == 0 and fecha_nueva is not None:
+                query_fallback = """
+                    UPDATE itinerario
+                    SET fecha = %s
+                    WHERE folio = %s AND fecha = %s
+                """
+                cursor.execute(query_fallback, [fecha_nueva, folio, fecha_original])
+
+                if cursor.rowcount == 0:
+                    print(f"[WARN] No se actualizó registro: folio={folio}, tipo={tipo}, fecha={fecha_original}")
 
     conn.commit()
     cursor.close()
@@ -304,55 +305,189 @@ def actualizar(folio, cambios):
     return f"Reserva/Itinerario {folio} actualizado correctamente."
 
 
-# In[9]:
+# In[15]:
 
 
-def cancelar_reserva(folio):
+def cancelar_reserva(folio, tipo=None, nombre=None):
     """
-    Cancela una reserva cambiando el estado a 'Cancelado' en la tabla reservas.
+    Cancela reservas de forma flexible:
     
+    Casos:
+    - folio: cancela todo (UPDATE estado = 'Cancelado')
+    - folio + tipo: elimina por tipo (DELETE)
+    - folio + nombre: elimina por nombre (LIKE)
+    - folio + tipo + nombre: elimina específico (LIKE)
+
     Parámetros:
-        folio : folio de la reserva a cancelar
+        folio  : obligatorio
+        tipo   : opcional
+        nombre : opcional
     """
+
+    # Normalización segura
+    if tipo in ["NONE", "", "null", None]:
+        tipo = None
+    else:
+        tipo = tipo.lower()
+
+    if nombre in ["NONE", "", "null", None]:
+        nombre = None
+
     conn = conectar_mysql()
     cursor = conn.cursor()
 
-    query = "UPDATE reservas SET estado = %s WHERE folio = %s"
-    valores = ("Cancelado", folio)
+    # Caso 1: cancelar TODO
+    if not tipo and not nombre:
+        query = "UPDATE reservas SET estado = %s WHERE folio = %s"
+        valores = ("Cancelado", folio)
+
+    # Caso 2: folio + tipo
+    elif tipo and not nombre:
+
+        query = """
+            DELETE FROM itinerario
+            WHERE folio = %s AND tipo = %s
+        """
+        valores = (folio, tipo)
+
+    # Caso 3: folio + nombre (LIKE)
+    elif nombre and not tipo:
+
+        query = """
+            DELETE FROM itinerario
+            WHERE folio = %s AND nombre LIKE %s
+        """
+        valores = (folio, f"%{nombre}%")
+
+    # Caso 4: folio + tipo + nombre (LIKE)
+    else:
+ 
+        query = """
+            DELETE FROM itinerario
+            WHERE folio = %s AND tipo = %s AND nombre LIKE %s
+        """
+        valores = (folio, tipo, f"%{nombre}%")
 
     cursor.execute(query, valores)
     conn.commit()
 
+    filas_afectadas = cursor.rowcount
+
     cursor.close()
     conn.close()
 
-    return f"Reserva {folio} cancelada correctamente."
+    if filas_afectadas == 0:
+        return "No se encontró ninguna reserva con los criterios proporcionados."
+
+    return f"{filas_afectadas} registro(s) afectados correctamente."
 
 
-# In[2]:
 
 
-def consultar_hoteles2(ciudad):
-    conn = sqlite3.connect('Turismo_Agente.db')
-    cursor = conn.cursor()
-    query = """
-        SELECT h.nombre, h.direccion, h.estrellas, h.servicios
-        FROM hoteles h
-        JOIN ciudades c ON h.ciudad_id = c.id
-        WHERE c.nombre LIKE ?
-    """
-    patron = f"%{ciudad}%"
-    cursor.execute(query, (patron,))
-    resultados = cursor.fetchall()
-    cursor.close()
-    conn.close()
+# In[11]:
+
+
+def consultar_bus(origen, destino, fecha):
+    conn = conectar_mysql2()
+    try:
+        cursor = conn.cursor()
+        query = """
+            SELECT 
+                c.fecha_salida, 
+                c.hora_salida, 
+                c.fecha_llegada, 
+                c.hora_llegada,
+                c.precio,
+                p.duracion, 
+                t_origen.nombre AS origen, 
+                t_destino.nombre AS destino, 
+                a.marca
+            FROM Salidas c
+            INNER JOIN Autobuses a 
+                ON c.id_autobus = a.id_autobus
+            INNER JOIN Rutas p 
+                ON c.id_ruta = p.id_ruta
+            INNER JOIN Terminales t_origen 
+                ON p.origen = t_origen.id_terminal
+            INNER JOIN Terminales t_destino 
+                ON p.destino = t_destino.id_terminal
+            WHERE t_origen.ubicacion LIKE %s
+              AND t_destino.ubicacion LIKE %s
+              AND c.fecha_salida = %s;
+        """
+
+        cursor.execute(query, (f"%{origen}%", f"%{destino}%", fecha))
+        resultados = cursor.fetchall()
+    finally:
+        cursor.close()
+        conn.close()
     return resultados
 
 
-# In[ ]:
+
+
+# In[13]:
+
+
+def buscar_vuelo(origen, destino, fecha):
+    conn = conectar_mysql3()
+    try:
+        cursor = conn.cursor()
+        query = """
+            SELECT 
+                c.hora_salida, 
+                c.hora_llegada, 
+                c.fecha_salida, 
+                t_origen.codigo AS origen, 
+                t_destino.codigo AS destino, 
+                a.nombre AS aerolinea
+            FROM vuelos c
+            INNER JOIN aeropuertos t_origen 
+                ON c.origen_codigo = t_origen.codigo
+            INNER JOIN aeropuertos t_destino 
+                ON c.destino_codigo = t_destino.codigo
+            INNER JOIN aerolineas a 
+                ON c.aerolinea_id = a.id
+            WHERE t_origen.codigo = %s
+              AND t_destino.codigo = %s
+              AND c.fecha_salida = %s;
+        """
+
+        cursor.execute(query, (origen, destino, fecha))
+        resultados = cursor.fetchall()
+    finally:
+        cursor.close()
+        conn.close()
+    return resultados
 
 
 
+# In[6]:
+
+
+def consultar_folio(folio):
+    conn = conectar_mysql()
+    cursor = conn.cursor(dictionary=True)  
+    
+    query = """
+        SELECT tipo, nombre, ciudad, fecha, detalles
+        FROM itinerario
+        WHERE folio = %s
+        ORDER BY fecha ASC
+    """
+    
+    cursor.execute(query, (folio,))
+    resultados = cursor.fetchall() 
+    
+    cursor.close()
+    conn.close()
+    
+    respuesta = {
+        "folio": folio,
+        "itinerario": resultados
+    }
+ 
+    return respuesta
 
 
 # In[ ]:

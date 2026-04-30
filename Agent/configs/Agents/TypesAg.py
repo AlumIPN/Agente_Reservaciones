@@ -48,19 +48,18 @@ from configs.Tools.switch import *
 
 main_Agent = Agent(
     name = "Principal Agent",
+    model="gpt-4o",
     instructions= principal_inst(context_variables),
     functions= [
         consultar,
-        buscar_vuelos,
+        buscar_vuelo,
         reservar,
         itinerario,
         obtener_pronostico,
         switch_change_ag,
-        switch_cancel_ag
-        #consultar_hoteles,
-        #consultar_atracciones,
-        #consultar_autos,
-        #consultar_transportes
+        switch_cancel_ag,
+        consultar_bus,
+        buscar_vuelo
      
     ]
     
@@ -72,12 +71,15 @@ main_Agent = Agent(
 
 change_Agent = Agent(
     name = "Change Agent",
+    model="gpt-4o",
     instructions= change_inst(context_variables),
     functions= [
         switch_main_ag,
         switch_cancel_ag,
-        actualizar
- 
+        actualizar,
+        consultar_folio,
+        consultar_bus,
+        buscar_vuelo
     ]
     
 )
@@ -88,6 +90,7 @@ change_Agent = Agent(
 
 cancel_Agent = Agent(
     name = "Cancel Agent",
+    model="gpt-4o",
     instructions= Cancel_inst(context_variables),
     functions= [
         switch_main_ag,
@@ -103,26 +106,14 @@ cancel_Agent = Agent(
 
 
 triage_agent = Agent(
-    name = "Main Agent",
-    instructions= triage_inst(context_variables),
-    functions= [
+    name="Triage Agent",
+    model="gpt-4o-mini",
+    instructions=triage_inst(context_variables),
+    functions=[
         consultar,
         switch_main_ag,
         switch_change_ag,
         switch_cancel_ag
     ]
-    
 )
-
-
-# In[ ]:
-
-
-
-
-
-# In[ ]:
-
-
-
 
