@@ -1,8 +1,52 @@
-#!/usr/bin/env python
-# coding: utf-8
+"""
+Módulo de definición de prompts e instrucciones del sistema.
 
-# In[1]:
+Este archivo centraliza las instrucciones utilizadas por los agentes
+de la arquitectura multiagente. Cada prompt define el comportamiento,
+responsabilidades, restricciones y flujo operativo de un agente
+especializado dentro del sistema.
 
+Objetivos principales:
+- Estandarizar el comportamiento de los agentes.
+- Definir responsabilidades específicas.
+- Controlar el flujo conversacional.
+- Garantizar consistencia en las respuestas.
+- Facilitar mantenimiento y escalabilidad.
+
+Estructura general:
+- Instrucciones base del sistema.
+- Instrucciones específicas por agente.
+- Reglas de transferencia entre agentes.
+- Restricciones operativas.
+- Reglas de interacción con herramientas.
+
+Agentes soportados:
+- Triage Agent
+- Principal Agent
+- Change Agent
+- Cancel Agent
+
+Autor: Brandon Giron
+Proyecto: Sistema Multiagente para Gestión de Reservaciones
+"""
+
+
+# ============================================================================
+# Instrucciones base del sistema
+# ============================================================================
+
+"""
+Prompt base compartido por todos los agentes del sistema.
+
+Define:
+- Rol general del asistente.
+- Capacidades principales.
+- Alcance funcional del sistema.
+- Comportamiento conversacional global.
+
+Estas instrucciones sirven como fundamento para la construcción de los
+prompts especializados utilizados por cada agente.
+"""
 
 SYSTEM_INSTRUCTIONS = """
 Tu eres un asistente de ayuda el cual puede ayudar con una variedad de solicitudes.
@@ -10,8 +54,22 @@ Tu puedes ayudar para realizar reservaciones, cambios, y cancelaciones.
 """
 
 
-# In[2]:
+# ============================================================================
+# Instrucciones del agente de clasificación
+# ============================================================================
 
+"""
+Prompt especializado para el Triage Agent.
+
+Responsabilidades:
+- Detectar la intención principal del usuario.
+- Clasificar solicitudes.
+- Redirigir conversaciones al agente correspondiente.
+- Gestionar solicitudes iniciales.
+
+El agente triage funciona como punto de entrada principal dentro
+de la arquitectura multiagente.
+"""
 
 TRIAGE_INSTRUCTIONS = SYSTEM_INSTRUCTIONS + """
 Eres el agente de triage, encargado de dirigir las solicitudes de los usuarios.
@@ -37,7 +95,25 @@ El contexto general está aquí: {general_context}
 """
 
 
-# In[12]:
+# ============================================================================
+# Instrucciones del agente de reservaciones
+# ============================================================================
+
+"""
+Prompt especializado para el Main Agent.
+
+Responsabilidades:
+- Gestionar solicitudes generales de viaje.
+- Realizar reservaciones.
+- Consultar transporte y vuelos.
+- Generar itinerarios.
+- Consultar información turística y climática.
+- Coordinar transferencias hacia otros agentes cuando sea necesario.
+
+El agente de reservaciones actúa como núcleo operativo de la arquitectura,
+encargándose de la mayoría de las solicitudes relacionadas con viajes
+y planificación.
+"""
 
 
 MAIN_INSTRUCTIONS = SYSTEM_INSTRUCTIONS + """
@@ -452,8 +528,24 @@ Contexto general:
 
 
 
-# In[5]:
+# ============================================================================
+# Instrucciones del agente de cambios
+# ============================================================================
 
+"""
+Prompt especializado para el Change Agent.
+
+Responsabilidades:
+- Gestionar modificaciones de reservaciones.
+- Actualizar itinerarios.
+- Procesar cambios de fechas.
+- Modificar información relacionada con transporte o actividades.
+- Validar datos antes de aplicar actualizaciones.
+- Transferir solicitudes a otros agentes cuando corresponda.
+
+Este agente se especializa en operaciones de actualización y mantenimiento
+de información previamente registrada.
+"""
 
 CHANGE_INSTRUCTIONS = SYSTEM_INSTRUCTIONS + """
 Eres un agente especializado en la gestión y actualización de reservas e itinerarios de viaje. Siempre debes dirigirte al usuario por su nombre
@@ -725,7 +817,23 @@ Contexto general:
 """
 
 
-# In[7]:
+# ============================================================================
+# Instrucciones del agente de cancelaciones
+# ============================================================================
+
+"""
+Prompt especializado para el Cancel Agent.
+
+Responsabilidades:
+- Procesar cancelaciones de reservaciones.
+- Eliminar elementos del itinerario.
+- Gestionar cancelaciones parciales o completas.
+- Confirmar operaciones críticas antes de ejecutarlas.
+- Mantener consistencia en el flujo de cancelación.
+
+Este agente se enfoca exclusivamente en operaciones relacionadas con
+cancelaciones y eliminación de información asociada a reservaciones.
+"""
 
 
 CANCEL_INSTRUCTIONS = SYSTEM_INSTRUCTIONS + """
@@ -873,60 +981,185 @@ Contexto general:
 """
 
 
-# In[8]:
+# ============================================================================
+# Generación dinámica de prompts
+# ============================================================================
 
+"""
+Funciones encargadas de construir dinámicamente las instrucciones
+utilizadas por cada agente del sistema.
+
+Estas funciones permiten:
+- Inyectar contexto del usuario.
+- Incorporar información general del sistema.
+- Personalizar prompts en tiempo de ejecución.
+- Mantener separación entre lógica y configuración.
+
+Cada función toma como entrada el diccionario global de contexto y
+retorna un prompt completamente formateado para el agente correspondiente.
+"""
+
+
+# ============================================================================
+# Prompt del agente de clasificación
+# ============================================================================
 
 def triage_inst(context_variables):
-    customer_context = context_variables.get("customer_context", None)
-    general_context= context_variables.get("general_context", None)
+    """
+    Genera las instrucciones dinámicas para el Triage Agent.
+
+    El prompt resultante incorpora:
+    - Información contextual del cliente.
+    - Información general del sistema.
+    - Reglas de clasificación y transferencia.
+
+    Parameters
+    ----------
+    context_variables : dict
+        Diccionario de contexto compartido entre agentes.
+
+    Returns
+    -------
+    str
+        Prompt formateado para el agente de clasificación.
+    """
+
+    customer_context = context_variables.get(
+        "customer_context",
+        None
+    )
+
+    general_context = context_variables.get(
+        "general_context",
+        None
+    )
 
     return TRIAGE_INSTRUCTIONS.format(
-        customer_context = customer_context,
-        general_context = general_context
+        customer_context=customer_context,
+        general_context=general_context
     )
 
 
-# In[9]:
-
+# ============================================================================
+# Prompt del agente principal
+# ============================================================================
 
 def principal_inst(context_variables):
-    customer_context = context_variables.get("customer_context", None)
-    general_context= context_variables.get("general_context", None)
+    """
+    Genera las instrucciones dinámicas para el Principal Agent.
+
+    El prompt incorpora:
+    - Contexto del usuario.
+    - Información temporal del sistema.
+    - Reglas operativas relacionadas con reservaciones,
+      itinerarios y consultas generales.
+
+    Parameters
+    ----------
+    context_variables : dict
+        Diccionario de contexto compartido entre agentes.
+
+    Returns
+    -------
+    str
+        Prompt formateado para el agente principal.
+    """
+
+    customer_context = context_variables.get(
+        "customer_context",
+        None
+    )
+
+    general_context = context_variables.get(
+        "general_context",
+        None
+    )
 
     return MAIN_INSTRUCTIONS.format(
-        customer_context = customer_context,
-        general_context = general_context
+        customer_context=customer_context,
+        general_context=general_context
     )
 
 
-# In[10]:
-
+# ============================================================================
+# Prompt del agente de cambios
+# ============================================================================
 
 def change_inst(context_variables):
-    customer_context = context_variables.get("customer_context", None)
-    general_context= context_variables.get("general_context", None)
+    """
+    Genera las instrucciones dinámicas para el Change Agent.
+
+    El prompt incorpora:
+    - Información contextual del cliente.
+    - Reglas para actualización de reservaciones.
+    - Restricciones relacionadas con modificaciones e itinerarios.
+
+    Parameters
+    ----------
+    context_variables : dict
+        Diccionario de contexto compartido entre agentes.
+
+    Returns
+    -------
+    str
+        Prompt formateado para el agente de cambios.
+    """
+
+    customer_context = context_variables.get(
+        "customer_context",
+        None
+    )
+
+    general_context = context_variables.get(
+        "general_context",
+        None
+    )
 
     return CHANGE_INSTRUCTIONS.format(
-        customer_context = customer_context,
-        general_context = general_context
+        customer_context=customer_context,
+        general_context=general_context
     )
 
 
-# In[11]:
-
+# ============================================================================
+# Prompt del agente de cancelaciones
+# ============================================================================
 
 def Cancel_inst(context_variables):
-    customer_context = context_variables.get("customer_context", None)
-    general_context= context_variables.get("general_context", None)
+    """
+    Genera las instrucciones dinámicas para el Cancel Agent.
 
-    return CANCEL_INSTRUCTIONS.format(
-        customer_context = customer_context,
-        general_context = general_context
+    El prompt incorpora:
+    - Información contextual del usuario.
+    - Reglas de cancelación.
+    - Restricciones de seguridad para eliminación de registros.
+    - Flujo operativo relacionado con cancelaciones.
+
+    Parameters
+    ----------
+    context_variables : dict
+        Diccionario de contexto compartido entre agentes.
+
+    Returns
+    -------
+    str
+        Prompt formateado para el agente de cancelaciones.
+    """
+
+    customer_context = context_variables.get(
+        "customer_context",
+        None
     )
 
+    general_context = context_variables.get(
+        "general_context",
+        None
+    )
 
-# In[ ]:
-
+    return CANCEL_INSTRUCTIONS.format(
+        customer_context=customer_context,
+        general_context=general_context
+    )
 
 
 
