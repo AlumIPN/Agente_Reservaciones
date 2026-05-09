@@ -1,6 +1,3 @@
-#!/usr/bin/env python
-# coding: utf-8
-
 """
 Módulo de definición y configuración de agentes especializados.
 
