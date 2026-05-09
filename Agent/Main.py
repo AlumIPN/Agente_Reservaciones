@@ -1,56 +1,182 @@
-#!/usr/bin/env python
-# coding: utf-8
 
-# In[1]:
+"""
+Módulo principal de ejecución de la interfaz conversacional multiagente.
 
+Este script inicializa la aplicación basada en Gradio y gestiona la
+interacción entre el usuario y la arquitectura multiagente utilizando
+la librería Swarm.
+
+Funcionalidades principales:
+- Inicialización del cliente Swarm.
+- Gestión del historial conversacional.
+- Transferencia dinámica entre agentes especializados.
+- Interfaz gráfica para interacción en tiempo real.
+- Finalización controlada de sesión.
+
+Autor: Brandon Giron
+Proyecto: Sistema Multiagente para Gestión de Reservaciones
+"""
 
 from configs.AI import *
 
-
-# In[4]:
-
-
 from swarm import Swarm
 from configs.Agents.Data.BDAg import cargar_contexto
-from configs.Agents.TypesAg import triage_agent  # agente inicial
+from configs.Agents.TypesAg import triage_agent
 import gradio as gr
 
-# Inicializa el cliente
+
+# ============================================================================
+# Inicialización del cliente principal
+# ============================================================================
+
+"""
+Cliente principal encargado de ejecutar el flujo multiagente.
+"""
 client = Swarm()
 
+
+# ============================================================================
+# Función principal de interacción
+# ============================================================================
+
 def responder(mensaje, historial, agente_actual):
-    # Si el usuario pide terminar, se cierra la sesión
+    """
+    Procesa la interacción del usuario dentro de la interfaz conversacional.
+
+    Esta función administra el flujo principal de conversación entre el
+    usuario y los agentes especializados. Su responsabilidad incluye:
+
+    - Registrar mensajes en el historial conversacional.
+    - Ejecutar el agente actualmente activo.
+    - Gestionar posibles transferencias entre agentes.
+    - Actualizar la conversación con la respuesta generada.
+    - Finalizar la sesión cuando el usuario lo solicite.
+
+    Parameters
+    ----------
+    mensaje : str
+        Mensaje ingresado por el usuario.
+
+    historial : list
+        Historial completo de la conversación en formato:
+        [{"role": "user|assistant", "content": "..."}]
+
+    agente_actual : Agent
+        Agente actualmente encargado de procesar la solicitud.
+
+    Returns
+    -------
+    tuple
+        Retorna:
+        - Historial actualizado para el chatbot.
+        - Estado actualizado de la conversación.
+        - Agente activo actualizado.
+    """
+
+    # ------------------------------------------------------------------------
+    # Validación de cierre de sesión
+    # ------------------------------------------------------------------------
+
     if mensaje.strip().lower() in ["exit", "terminar"]:
-        historial.append({"role": "assistant", "content": "Sesión finalizada. ¡Hasta pronto!"})
-        demo.close()  # cierra la interfaz
-        return historial, historial, triage_agent  # reinicia agente a triage por si se relanza
+        historial.append({
+            "role": "assistant",
+            "content": "Sesión finalizada. ¡Hasta pronto!"
+        })
 
-    # historial: lista de mensajes [{role, content}, ...]
-    historial.append({"role": "user", "content": mensaje})
+        # Cierre de la interfaz gráfica
+        demo.close()
 
-    # Ejecuta con el agente actual
-    respuesta = client.run(agent=agente_actual, messages=historial)
+        # Reinicio del agente principal para futuras ejecuciones
+        return historial, historial, triage_agent
 
-    # Actualiza el agente si hubo transferencia
+    # ------------------------------------------------------------------------
+    # Registro del mensaje del usuario
+    # ------------------------------------------------------------------------
+
+    historial.append({
+        "role": "user",
+        "content": mensaje
+    })
+
+    # ------------------------------------------------------------------------
+    # Ejecución del agente activo
+    # ------------------------------------------------------------------------
+
+    respuesta = client.run(
+        agent=agente_actual,
+        messages=historial
+    )
+
+    # ------------------------------------------------------------------------
+    # Actualización dinámica del agente
+    # ------------------------------------------------------------------------
+
     agente_actual = respuesta.agent
-    #(f"Agente activo: {agente_actual}")
 
-    # Extrae el último mensaje del asistente
+    # ------------------------------------------------------------------------
+    # Obtención de la respuesta generada
+    # ------------------------------------------------------------------------
+
     contenido = respuesta.messages[-1]["content"]
-    historial.append({"role": "assistant", "content": contenido})
+
+    historial.append({
+        "role": "assistant",
+        "content": contenido
+    })
+
+    # ------------------------------------------------------------------------
+    # Retorno de estados actualizados
+    # ------------------------------------------------------------------------
 
     return historial, historial, agente_actual
 
+
+# ============================================================================
+# Construcción de la interfaz gráfica
+# ============================================================================
+
 with gr.Blocks() as demo:
+    """
+    Interfaz principal de usuario construida con Gradio.
+
+    Componentes:
+    - Chatbot para visualización conversacional.
+    - Campo de entrada de texto.
+    - Botón de envío.
+    - Estados persistentes de historial y agente activo.
+    """
+
     gr.Markdown("## Chat con historial")
 
+    # ------------------------------------------------------------------------
+    # Componentes visuales
+    # ------------------------------------------------------------------------
+
     chatbot = gr.Chatbot()
-    entrada = gr.Textbox(label="Escribe tu mensaje")
+
+    entrada = gr.Textbox(
+        label="Escribe tu mensaje"
+    )
+
     enviar = gr.Button("Enviar")
 
-    # Cada sesión inicia con historial vacío y agente triage
-    estado = gr.State([])            
-    agente = gr.State(triage_agent)  
+    # ------------------------------------------------------------------------
+    # Estados persistentes de sesión
+    # ------------------------------------------------------------------------
+
+    """
+    Estado del historial conversacional.
+    """
+    estado = gr.State([])
+
+    """
+    Estado del agente actualmente activo.
+    """
+    agente = gr.State(triage_agent)
+
+    # ------------------------------------------------------------------------
+    # Asociación de eventos
+    # ------------------------------------------------------------------------
 
     enviar.click(
         responder,
@@ -58,11 +184,12 @@ with gr.Blocks() as demo:
         outputs=[chatbot, estado, agente]
     )
 
+
+# ============================================================================
+# Ejecución de la aplicación
+# ============================================================================
+
+"""
+Inicialización de la interfaz gráfica en entorno interactivo.
+"""
 demo.launch(inline=True)
-
-
-# In[ ]:
-
-
-
-
