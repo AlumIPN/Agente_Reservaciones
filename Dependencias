@@ -1,3 +1,12 @@
 Para que el proyecto funcione adecuadamente deberán correr el siguiente comando en bash:
 
 pip install -r requirements.txt
+
+------------------------------------------------
+Dentro de la carpeta Agents/Data se encuentran los archivos .sql, con los cuales el sistema interactua, estos son:
+  TAerero.sql # Contiene los horarios de salida de los vuelos
+  Turismo_Agente.sql # Base de datos principal, la cual contiene las reservaciones e itinerarios de los usuarios. Esta también contiene la información del usuario.
+  Autobus.sql # Contiene las rutas de salida de los autobuses, terminales, horarios.
+
+------------------------------------------------------------------------------------
+El archivo env_Ejemplo.txt contiene los nombres de las variables para las api keys, seguir la configuración del archivo.
